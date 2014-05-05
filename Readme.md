@@ -6,7 +6,7 @@ Be careful, see the [Upgrading section](Readme.md#upgrade) for <= v1.0.4, there'
 
 `statsd-php-client` is an Open Source, and **Object Oriented** Client for **etsy/statsd** written in php
 
-- `StatsdDataFactory` creates the `MTA\StatsdClient\Entity\StatsdDataInterface` Objects
+- `StatsdDataFactory` creates the `Liuggio\StatsdClient\Entity\StatsdDataInterface` Objects
 
 - `Sender` just sends data over the network (there are many sender)
 
@@ -44,16 +44,16 @@ Be careful, see the [Upgrading section](Readme.md#upgrade) for <= v1.0.4, there'
 ### Standard Usage
 
 ```php
-use MTA\StatsdClient\StatsdClient,
-    MTA\StatsdClient\Factory\StatsdDataFactory,
-    MTA\StatsdClient\Sender\SocketSender;
-// use MTA\StatsdClient\Sender\SysLogSender;
+use Liuggio\StatsdClient\StatsdClient,
+    Liuggio\StatsdClient\Factory\StatsdDataFactory,
+    Liuggio\StatsdClient\Sender\SocketSender;
+// use Liuggio\StatsdClient\Sender\SysLogSender;
 
 $sender = new SocketSender(/*'localhost', 8126, 'udp'*/);
 // $sender = new SysLogSender(); // enabling this, the packet will not send over the socket
 
 $client = new StatsdClient($sender);
-$factory = new StatsdDataFactory('\MTA\StatsdClient\Entity\StatsdData');
+$factory = new StatsdDataFactory('\Liuggio\StatsdClient\Entity\StatsdData');
 
 // create the data with the factory
 $data[] = $factory->timing('usageTime', 100);
@@ -69,13 +69,13 @@ $client->send($data);
 ### Usage with Monolog
 
 ```php
-use MTA\StatsdClient\StatsdClient,
-    MTA\StatsdClient\Factory\StatsdDataFactory,
-    MTA\StatsdClient\Sender\SocketSender;
-// use MTA\StatsdClient\Sender\SysLogSender;
+use Liuggio\StatsdClient\StatsdClient,
+    Liuggio\StatsdClient\Factory\StatsdDataFactory,
+    Liuggio\StatsdClient\Sender\SocketSender;
+// use Liuggio\StatsdClient\Sender\SysLogSender;
 
 use Monolog\Logger;
-use MTA\StatsdClient\Monolog\Handler\StatsDHandler;
+use Liuggio\StatsdClient\Monolog\Handler\StatsDHandler;
 
 $sender = new SocketSender(/*'localhost', 8126, 'udp'*/);
 // $sender = new SysLogSender(); // enabling this, the packet will not send over the socket
