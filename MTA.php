@@ -297,10 +297,10 @@ class MTA {
         switch ($this->_configs['sender']) {
         case 'echo':
             $sender = new EchoSender();
-            $sender = new EchoSender();
+            break;
         case 'syslog':
-            $sender = new EchoSender();
-            $sender = new EchoSender();
+            $sender = new SysLogSender();
+            break;
         default:    // udp socket
             $server = $this->_configs['server'];
             $sender = new SocketSender($server['host'], $server['port'], 'udp');

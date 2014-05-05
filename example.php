@@ -4,6 +4,7 @@ require('MTA.php');
 
 $mta = MTA::create('www');
 
+$mta->config('sender', 'socket');
 $mta->config('server', array('host' => '127.0.0.1', 'port' => 8425));
 $mta->config('sampleRate', 100);
 
