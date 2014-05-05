@@ -5,6 +5,8 @@ $loader->add('Liuggio\\', __DIR__);
 
 use Liuggio\StatsdClient\StatsdClient,
     Liuggio\StatsdClient\Factory\StatsdDataFactory,
+    Liuggio\StatsdClient\Sender\EchoSender,
+    Liuggio\StatsdClient\Sender\SyslogSender,
     Liuggio\StatsdClient\Sender\SocketSender;
 
 register_shutdown_function('MTA::flush');
@@ -24,37 +26,43 @@ class MTA {
     private $_timers = array();
     private $_records = array();
 
+    /**
+     * account name, prefix for all metrics
+     */
     private $_prefix = '';
 
+    /**
+     * config
+     */
     private $_configs = array(
-        'debug' => false,
+        'sender' => 'socket',
         'server' => array('host' => '127.0.0.1', 'port' => 8125),
+        'tagPrefix' => '_t_',
         'sampleRate' => 100,
     );
 
+    /**
+     * buffer
+     */
     private $_buffers = array(
         'timer' => array(),
         'counter' => array(),
         'gauge' => array(),
     );
 
+    /**
+     * tags
+     */
     private $_tags = array();
 
-    private $_sender = null;
     private $_factory = null;
-    private $_client = null;
 
     private function __construct($name, $configs = array()) {
         $this->_prefix = $name;
-        $this->_configs = array_merge($this->_configs, $configs);
+        $this->_factory = new StatsdDataFactory('\Liuggio\StatsdClient\Entity\StatsdData');
 
-        if (is_array($this->_configs['server'])) {
-            $server = $this->_configs['server'];
-            $this->_sender = new SocketSender($server['host'], $server['port'], 'udp');
-            $this->_client = new StatsdClient($this->_sender);
-            $this->_factory = new StatsdDataFactory('\Liuggio\StatsdClient\Entity\StatsdData');
-        } else {
-            trigger_error('MTA.config.server is required', E_USER_ERROR);
+        foreach ($configs as $key => $value) {
+            $this->config($key, $value);
         }
     }
 
@@ -81,7 +89,23 @@ class MTA {
      * @param {mixed} $value
      */
     public function config($key, $value) {
+
+        if ($key === 'sender') {
+            if (in_array($value, array('socket', 'syslog', 'echo'))) {
+            } else {
+                trigger_error('unknown data sender (socket, syslog, echo)', E_USER_ERROR);
+            }
+        }
+
+        if ($key === 'server') {
+            if (isset($this->_configs['server']['host']) && isset($this->_configs['server']['port'])) {
+            } else {
+                trigger_error('server misconfigured is required', E_USER_ERROR);
+            }
+        }
+
         $this->_configs[$key] = $value;
+
         return $this;
     }
 
@@ -115,8 +139,6 @@ class MTA {
 
     /**
      * Stop a timer.
-     *
-     * $name should be the same as the $name used in start().
      *
      * @param string $name The name of the timer to end.
      */
@@ -237,11 +259,16 @@ class MTA {
     }
 
     /**
-     * prepare data for sending
+     * send data to backend
      */
-    public function getData() {
+    public function send() {
         $data = array();
-        $prefix = $this->_prefix;
+
+        // sample hit ?
+        if (rand(1, 100) > $this->_configs['sampleRate']) {
+            $this->clear();
+            return $data;
+        }
 
         // get timers
         $timers = $this->getTimers();
@@ -249,40 +276,68 @@ class MTA {
             $this->timing($key, $value);
         }
 
-        print_r($this->_buffers);
+        // print_r($this->_buffers);
 
         // construct data objects from buffer
         foreach ($this->_buffers['timer'] as $key => $value) {
-            $data[] = $this->_factory->timing($key, $value);
+            $data[] = $this->_factory->timing($this->getKey($key), $value);
         }
         foreach ($this->_buffers['counter'] as $key => $value) {
             while ($value--) {
-                $data[] = $this->_factory->increment($key);
+                $data[] = $this->_factory->increment($this->getKey($key));
             }
         }
         foreach ($this->_buffers['gauge'] as $key => $value) {
-            $data[] = $this->_factory->gauge($key, $value);
+            $data[] = $this->_factory->gauge($this->getKey($key), $value);
         }
 
         $this->clear();
 
-        return $data;
+        // flush data to specified sender
+        switch ($this->_configs['sender']) {
+        case 'echo':
+            $sender = new EchoSender();
+            $sender = new EchoSender();
+        case 'syslog':
+            $sender = new EchoSender();
+            $sender = new EchoSender();
+        default:    // udp socket
+            $server = $this->_configs['server'];
+            $sender = new SocketSender($server['host'], $server['port'], 'udp');
+            break;
+        }
+        $client = new StatsdClient($sender);
+        $client->send($data);
+    }
+
+    /**
+     * construct key
+     *  - add prefix
+     *  - add tags
+     */
+    private function getKey($key) {
+        static $tagContent = '';
+        if (empty($tagContent)) {
+            $tagItems = array();
+            $tagPrefix = $this->_configs['tagPrefix'];
+            foreach ($this->_tags as $name => $value) {
+                $tagItems[] = $tagPrefix . $name;
+                $tagItems[] = $value;
+            }
+            $tagContent = implode('.', $tagItems);
+        }
+        return implode('.', array($this->_prefix, $key, $tagContent));
     }
 
     /**
      * flush data to server
+     *
+     * TODO add stats for mta collector
      */
     public static function flush() {
-
-        // sample hit ?
-
-        // prepare data
-        $data = array();
         foreach (self::$_instances as $name => $instance) {
-            $data = array_merge($data, $instance->getData());
+            $instance->send();
         }
-        print_r($data);
-        echo 'flush metrics', PHP_EOL;
     }
 
 }
