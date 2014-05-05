@@ -1,8 +1,8 @@
 <?php
 
-use MTA\StatsdClient\StatsdClient,
-    MTA\StatsdClient\Factory\StatsdDataFactory,
-    MTA\StatsdClient\Sender\SocketSender;
+use Liuggio\StatsdClient\StatsdClient,
+    Liuggio\StatsdClient\Factory\StatsdDataFactory,
+    Liuggio\StatsdClient\Sender\SocketSender;
 
 class MTA {
 
