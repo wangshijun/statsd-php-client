@@ -317,6 +317,8 @@ class MTA {
             $this->outputHeaderJS();
         }
 
+        $configs['sampleRate'] = intval($configs['sampleRate']);
+
         echo "
         <script>
             (function() {
@@ -324,7 +326,7 @@ class MTA {
                 mta('create', '{$this->_prefix}');
 
                 mta('config', 'beaconImage', '{$configs['beacon']}');
-                mta('config', 'sampleRate', '{$configs['sampleRate']}');";
+                mta('config', 'sampleRate', {$configs['sampleRate']});";
 
         foreach ($tags as $tagk => $tagv) {
             echo "
