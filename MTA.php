@@ -121,6 +121,13 @@ class MTA {
     }
 
     /**
+     * get all tags
+     */
+    public function tags() {
+        return $this->_tags;
+    }
+
+    /**
      * Start an timer.
      *
      * @param string $name The name of the timer to start.
