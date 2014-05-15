@@ -344,12 +344,25 @@ class MTA {
                 mta('send', 'network');
                 mta('send', 'resource');
 
-                var script = document.createElement('script');
-                script.type = 'text/javascript';
-                script.async = true;
-                script.src = '{$configs['jspath']}';
-                var head = document.getElementsByTagName('script')[0];
-                head.parentNode.insertBefore(script, head);
+                if (document.readyState === 'complete') {
+                    injectMtaJS();
+                } else {
+                    var oldonload = window.onload;
+                    window.onload = function () {
+                        injectMtaJS();
+                        if (oldonload) {
+                            oldonload();
+                        }
+                    };
+                }
+                function injectMtaJS() {
+                    var script = document.createElement('script');
+                    script.type = 'text/javascript';
+                    script.async = true;
+                    script.src = '{$configs['jspath']}';
+                    var head = document.getElementsByTagName('script')[0];
+                    head.parentNode.insertBefore(script, head);
+                }
             })();
         </script>";
     }
