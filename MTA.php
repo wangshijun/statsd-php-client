@@ -9,8 +9,6 @@ use Liuggio\StatsdClient\StatsdClient,
     Liuggio\StatsdClient\Sender\SyslogSender,
     Liuggio\StatsdClient\Sender\SocketSender;
 
-register_shutdown_function('MTA::flush');
-
 class MTA {
 
     /**
@@ -32,11 +30,18 @@ class MTA {
     private $_prefix = '';
 
     /**
+     * has header sent
+     */
+    private $_hasHeaderSent = false;
+
+    /**
      * config
      */
     private $_configs = array(
-        'sender' => 'socket',
+        'sender' => 'browser',
         'server' => array('host' => '127.0.0.1', 'port' => 8125),
+        'beacon' => 'http://frep.meituan.net/_.gif',
+        'jspath' => 'mta.js',
         'tagPrefix' => '_t_',
         'sampleRate' => 100,
     );
@@ -73,7 +78,7 @@ class MTA {
      * @param {array} $configs
      * @return instance
      */
-    public static function create($name, $configs = array()) {
+    public static function getInstance($name, $configs = array()) {
         if (!isset(self::$_instances[$name])) {
             $instance = new self($name, $configs);
             self::$_instances[$name] = $instance;
@@ -91,9 +96,9 @@ class MTA {
     public function config($key, $value) {
 
         if ($key === 'sender') {
-            if (in_array($value, array('socket', 'syslog', 'echo'))) {
+            if (in_array($value, array('socket', 'syslog', 'echo', 'browser'))) {
             } else {
-                trigger_error('unknown data sender (socket, syslog, echo)', E_USER_ERROR);
+                trigger_error('unknown data sender (socket, syslog, echo, browser)', E_USER_ERROR);
             }
         }
 
@@ -269,6 +274,90 @@ class MTA {
      * send data to backend
      */
     public function send() {
+        if ($this->_configs['sender'] === 'browser') {
+            $this->_sendFromBrowser();
+        } else {
+            $this->_sendFromServer();
+        }
+    }
+
+    /**
+     * output header js
+     * should be called before send
+     */
+    public function outputHeaderJS() {
+        if ($this->_hasHeaderSent) {
+            return;
+        }
+        echo "
+        <script>
+            (function (w, mta) {
+                w['MeituanAnalyticsObject'] = mta;
+                w[mta] = w[mta] || function () {
+                    (w[mta].q = w[mta].q || []).push(arguments)
+                };
+            })(window, 'mta');
+        </script>";
+        $this->_hasHeaderSent = true;
+    }
+
+    /**
+     * send data via beacon in browser
+     */
+    private function _sendFromBrowser() {
+        $configs = $this->_configs;
+        $tags = $this->_tags;
+
+        // TODO trigger error here
+        if (empty($configs['jspath']) || empty($configs['beacon'])) {
+            return;
+        }
+
+        if (!$this->_hasHeaderSent) {
+            $this->outputHeaderJS();
+        }
+
+        echo "
+        <script>
+            (function() {
+                if (!mta) { return; }
+                mta('create', '{$this->_prefix}');
+
+                mta('config', 'beaconImage', '{$configs['beacon']}');
+                mta('config', 'sampleRate', '{$configs['sampleRate']}');";
+
+        foreach ($tags as $tagk => $tagv) {
+            echo "
+                mta('tag', '{$tagk}', '{$tagv}');";
+        }
+
+        foreach ($this->_buffers as $key => $metrics) {
+            if (!empty($metrics)) {
+                $metrics = json_encode($metrics);
+                echo "
+                mta('send', 'server', {$metrics}, '{$key}');";
+            }
+        }
+
+        echo "
+                mta('send', 'page');
+                mta('send', 'network');
+                mta('send', 'resource');
+
+                var script = document.createElement('script');
+                script.type = 'text/javascript';
+                script.async = true;
+                script.src = '{$configs['jspath']}';
+                var head = document.getElementsByTagName('script')[0];
+                head.parentNode.insertBefore(script, head);
+            })();
+        </script>";
+    }
+
+    /**
+     * send data via socket from server side
+     */
+    private function _sendFromServer() {
         $data = array();
 
         // sample hit ?
@@ -287,15 +376,15 @@ class MTA {
 
         // construct data objects from buffer
         foreach ($this->_buffers['timer'] as $key => $value) {
-            $data[] = $this->_factory->timing($this->getKey($key), $value);
+            $data[] = $this->_factory->timing($this->_getKey($key), $value);
         }
         foreach ($this->_buffers['counter'] as $key => $value) {
             while ($value--) {
-                $data[] = $this->_factory->increment($this->getKey($key));
+                $data[] = $this->_factory->increment($this->_getKey($key));
             }
         }
         foreach ($this->_buffers['gauge'] as $key => $value) {
-            $data[] = $this->_factory->gauge($this->getKey($key), $value);
+            $data[] = $this->_factory->gauge($this->_getKey($key), $value);
         }
 
         $this->clear();
@@ -308,7 +397,7 @@ class MTA {
         case 'syslog':
             $sender = new SysLogSender();
             break;
-        default:    // udp socket
+        case 'socket':    // udp socket
             $server = $this->_configs['server'];
             $sender = new SocketSender($server['host'], $server['port'], 'udp');
             break;
@@ -322,7 +411,7 @@ class MTA {
      *  - add prefix
      *  - add tags
      */
-    private function getKey($key) {
+    private function _getKey($key) {
         static $tagContent = '';
         if (empty($tagContent)) {
             $tagItems = array();
