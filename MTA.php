@@ -297,9 +297,9 @@ class MTA {
 
         // send from browser | server
         if ($this->_configs['sender'] === 'browser') {
-            $this->_sendFromBrowser();
+            return $this->_sendFromBrowser();
         } else {
-            $this->_sendFromServer();
+            return $this->_sendFromServer();
         }
     }
 
@@ -307,14 +307,16 @@ class MTA {
      * output header js
      * should be called before send
      */
-    public function outputHeaderJS() {
+    public function getHeaderJS() {
         if ($this->_configs['sender'] !== 'browser') {
             return;
         }
         if ($this->_hasHeaderSent) {
             return;
         }
-        echo "
+        $this->_hasHeaderSent = true;
+
+        return "
         <script>
             (function (w, mta) {
                 w['MeituanAnalyticsObject'] = mta;
@@ -323,7 +325,6 @@ class MTA {
                 };
             })(window, 'mta');
         </script>";
-        $this->_hasHeaderSent = true;
     }
 
     /**
@@ -332,41 +333,43 @@ class MTA {
     private function _sendFromBrowser() {
         $configs = $this->_configs;
         $tags = $this->_tags;
+        $account = $this->_prefix;
 
         // TODO trigger error here
         if (empty($configs['jspath']) || empty($configs['beacon'])) {
             return;
         }
 
+        $content = '';
         if (!$this->_hasHeaderSent) {
-            $this->outputHeaderJS();
+            $content .= $this->getHeaderJS();
         }
 
         $configs['sampleRate'] = intval($configs['sampleRate']);
 
-        echo "
+        $content .= "
         <script>
             (function() {
                 if (!mta) { return; }
-                mta('create', '{$this->_prefix}');
+                mta('create', '{$account}');
 
                 mta('config', 'beaconImage', '{$configs['beacon']}');
                 mta('config', 'sampleRate', {$configs['sampleRate']});";
 
         foreach ($tags as $tagk => $tagv) {
-            echo "
+            $content .= "
                 mta('tag', '{$tagk}', '{$tagv}');";
         }
 
         foreach ($this->_buffers as $key => $metrics) {
             if (!empty($metrics)) {
                 $metrics = json_encode($metrics);
-                echo "
+                $content .= "
                 mta('send', 'server', {$metrics}, '{$key}');";
             }
         }
 
-        echo "
+        $content .= "
                 mta('send', 'page');
                 mta('send', 'network');
                 mta('send', 'resource');
@@ -393,6 +396,8 @@ class MTA {
                 }
             })();
         </script>";
+
+        return $content;
     }
 
     /**
