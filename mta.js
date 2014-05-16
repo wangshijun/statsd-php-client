@@ -642,6 +642,45 @@ Tracker.prototype = {
 ;/* global Tracker */
 
 /**
+ * cdn timing data collector
+ *
+ * @see http://www.w3.org/TR/2014/CR-resource-timing-20140325/
+ * TODO move sub.js into this
+ */
+Tracker.addPlugin('cdn', {
+    type: 'timer',
+    data: function () {
+        /* global M,SubResoucesTiming */
+        if (typeof M === 'object' && M.subresources && M.subresources.names && SubResoucesTiming) {
+            window.SubResoucesTiming = SubResoucesTiming;
+            var lastImage = M.subresources.lastImage || "",
+                firstImage = M.subresources.firstImage || "",
+                resources = new SubResoucesTiming(M.subresources.names, lastImage, firstImage);
+
+            if (!resources.length) {
+                return;
+            }
+
+            var data = {};
+            for (var i = 0, n = resources.length; i < n; i++) {
+                var resource = resources[i];
+                if (resource.server) {
+                    data[resource.server] = {};
+                    for (var key in resource) {
+                        if (resource.hasOwnProperty(key) && parseInt(resource[key], 10) > 0) {
+                            data[resource.server][key] = resource[key];
+                        }
+                    }
+                }
+            }
+
+            return data;
+        }
+    }
+});
+;/* global Tracker */
+
+/**
  * network data
  *
  * @see https://dvcs.w3.org/hg/webperf/raw-file/tip/specs/NavigationTiming/Overview.html
@@ -737,12 +776,28 @@ Tracker.addPlugin('resource', {
         /* global M,SubResoucesTiming */
         if (typeof M === 'object' && M.subresources && M.subresources.names && SubResoucesTiming) {
             window.SubResoucesTiming = SubResoucesTiming;
-            var lastImage = M.subresources.lastImage || "";
-            var firstImage = M.subresources.firstImage || "";
-            var data = new SubResoucesTiming(M.subresources.names, lastImage, firstImage);
-            if (data) {
-                return data;
+            var lastImage = M.subresources.lastImage || "",
+                firstImage = M.subresources.firstImage || "",
+                resources = new SubResoucesTiming(M.subresources.names, lastImage, firstImage);
+
+            if (!resources.length) {
+                return;
             }
+
+            var data = {};
+            for (var i = 0, n = resources.length; i < n; i++) {
+                var resource = resources[i];
+                if (resource.id) {
+                    data[resource.id] = {};
+                    for (var key in resource) {
+                        if (resource.hasOwnProperty(key) && parseInt(resource[key], 10) > 0) {
+                            data[resource.id][key] = resource[key];
+                        }
+                    }
+                }
+            }
+
+            return data;
         }
     }
 });
@@ -905,22 +960,22 @@ SubResoucesTiming = (function () {
         output.url = url;
       }
       if (~blocking) {
-        output.b = blocking;
+        output.blocking = blocking;
       }
       if (~dns) {
-        output.d = dns;
+        output.dns = dns;
       }
       if (~connecting) {
-        output.c = connecting;
+        output.connecting = connecting;
       }
       if (~sending) {
-        output.s = sending;
+        output.sending = sending;
       }
       if (~response) {
-        output.r = response;
+        output.response = response;
       }
       if (~transfer) {
-        output.t = transfer;
+        output.transfer = transfer;
       }
       queryObject.push(output);
     }
