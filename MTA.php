@@ -274,6 +274,13 @@ class MTA {
      * send data to backend
      */
     public function send() {
+        // get timers
+        $timers = $this->getTimers();
+        foreach ($timers as $key => $value) {
+            $this->timing($key, $value);
+        }
+
+        // send from browser | server
         if ($this->_configs['sender'] === 'browser') {
             $this->_sendFromBrowser();
         } else {
@@ -379,12 +386,6 @@ class MTA {
         if (rand(1, 100) > $this->_configs['sampleRate']) {
             $this->clear();
             return $data;
-        }
-
-        // get timers
-        $timers = $this->getTimers();
-        foreach ($timers as $key => $value) {
-            $this->timing($key, $value);
         }
 
         // print_r($this->_buffers);
