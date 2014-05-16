@@ -91,17 +91,6 @@ class MTA {
             self::$_instances[$account] = $instance;
         }
 
-        // copy data from "anonymous" to named one
-        if ($account !== 'anonymous' && isset(self::$_instances['anonymous'])) {
-            $anonymous = self::$_instances['anonymous'];
-            $instance = self::$_instances[$account];
-            $timers = $anonymous->getTimers();
-            foreach ($timers as $key => $value) {
-                $instance->timing($key, $value);
-            }
-            $anonymous->clear();
-        }
-
         return self::$_instances[$account];
     }
 
@@ -289,9 +278,17 @@ class MTA {
     }
 
     /**
-     * send data to backend
+     * send data to browser or via UDP
      */
     public function send() {
+        // copy data from "anonymous" to current
+        $anonymous = self::getInstance('anonymous');
+        $timers = $anonymous->getTimers();
+        foreach ($timers as $key => $value) {
+            $this->timing($key, $value);
+        }
+        $anonymous->clear();
+
         // get timers
         $timers = $this->getTimers();
         foreach ($timers as $key => $value) {
@@ -373,6 +370,7 @@ class MTA {
                 mta('send', 'page');
                 mta('send', 'network');
                 mta('send', 'resource');
+                mta('send', 'cdn');
 
                 if (document.readyState === 'complete') {
                     injectMtaJS();
