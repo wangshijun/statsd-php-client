@@ -62,9 +62,14 @@ class MTA {
 
     private $_factory = null;
 
-    private function __construct($name, $configs = array()) {
-        $this->_prefix = $name;
-        $this->_factory = new StatsdDataFactory('\Liuggio\StatsdClient\Entity\StatsdData');
+    /**
+     * constructor
+     *
+     * @param {string} $account
+     * @param {array} $configs
+     */
+    private function __construct($account, $configs = array()) {
+        $this->_prefix = $account;
 
         foreach ($configs as $key => $value) {
             $this->config($key, $value);
@@ -73,18 +78,31 @@ class MTA {
 
     /**
      * create mta instance with specified account and config
+     * if no account specified, "anonymous" is used, and all data will be copied to
+     * a named instance if any avaliable
      *
-     * @param {string} $name
+     * @param {string} $account
      * @param {array} $configs
      * @return instance
      */
-    public static function getInstance($name, $configs = array()) {
-        if (!isset(self::$_instances[$name])) {
-            $instance = new self($name, $configs);
-            self::$_instances[$name] = $instance;
+    public static function getInstance($account = 'anonymous', $configs = array()) {
+        if (!isset(self::$_instances[$account])) {
+            $instance = new self($account, $configs);
+            self::$_instances[$account] = $instance;
         }
 
-        return self::$_instances[$name];
+        // copy data from "anonymous" to named one
+        if ($account !== 'anonymous' && isset(self::$_instances['anonymous'])) {
+            $anonymous = self::$_instances['anonymous'];
+            $instance = self::$_instances[$account];
+            $timers = $anonymous->getTimers();
+            foreach ($timers as $key => $value) {
+                $instance->timing($key, $value);
+            }
+            $anonymous->clear();
+        }
+
+        return self::$_instances[$account];
     }
 
     /**
@@ -142,7 +160,7 @@ class MTA {
             return;
         }
         if (!empty($this->_timers[$name])) {
-            //avoid repeat start
+            // avoid repeat start
             return;
         }
         $this->_timers[$name] = microtime(true);
@@ -293,6 +311,9 @@ class MTA {
      * should be called before send
      */
     public function outputHeaderJS() {
+        if ($this->_configs['sender'] !== 'browser') {
+            return;
+        }
         if ($this->_hasHeaderSent) {
             return;
         }
@@ -380,6 +401,12 @@ class MTA {
      * send data via socket from server side
      */
     private function _sendFromServer() {
+        static $factory;
+
+        if (empty($factory)) {
+            $factory =  new StatsdDataFactory('\Liuggio\StatsdClient\Entity\StatsdData');
+        }
+
         $data = array();
 
         // sample hit ?
@@ -392,15 +419,15 @@ class MTA {
 
         // construct data objects from buffer
         foreach ($this->_buffers['timer'] as $key => $value) {
-            $data[] = $this->_factory->timing($this->_getKey($key), $value);
+            $data[] = $factory->timing($this->_getKey($key), $value);
         }
         foreach ($this->_buffers['counter'] as $key => $value) {
             while ($value--) {
-                $data[] = $this->_factory->increment($this->_getKey($key));
+                $data[] = $factory->increment($this->_getKey($key));
             }
         }
         foreach ($this->_buffers['gauge'] as $key => $value) {
-            $data[] = $this->_factory->gauge($this->_getKey($key), $value);
+            $data[] = $factory->gauge($this->_getKey($key), $value);
         }
 
         $this->clear();

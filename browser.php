@@ -3,13 +3,18 @@ error_reporting(E_ALL);
 
 require('MTA.php');
 
+$mta = MTA::getInstance();
+$mta->start('anonymous.timer');
+simulate_execution();
+$mta->stop('anonymous.timer');
+
 $mta = MTA::getInstance('www');
 
 $mta->config('sender', 'browser');
 $mta->config('beacon', 'http://127.0.0.1:8888/_.gif');
 $mta->config('sampleRate', 100);
 
-$mta->tag('server', 'localhost');
+$mta->tag('server', php_uname('n'));
 $mta->tag('page', 'example');
 
 $mta->start('framework');
