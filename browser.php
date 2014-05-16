@@ -59,6 +59,6 @@ function simulate_execution() {
     }
 }
 
-$mta->outputHeaderJS();
-$mta->send();
+echo $mta->outputHeaderJS();
+echo $mta->send();
 
