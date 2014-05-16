@@ -128,7 +128,7 @@ class MTA {
      * @param {mixed} $value
      */
     public function tag($key, $value) {
-        $this->_tags[$key] = $value;
+        $this->_tags[$key] = preg_replace(array('/\./', '/\//', '/-+/'), '-', $value);
         return $this;
     }
 
@@ -146,14 +146,15 @@ class MTA {
      */
     public function start($name = null) {
         if (empty($name)) {
-            return;
+            return $this;
         }
         if (!empty($this->_timers[$name])) {
             // avoid repeat start
-            return;
+            return $this;
         }
         $this->_timers[$name] = microtime(true);
         // echo 'start timer:', $name, ' => ', $this->_timers[$name], PHP_EOL;
+        return $this;
     }
 
     /**
@@ -163,12 +164,13 @@ class MTA {
      */
     public function stop($name = null) {
         if (empty($name) || empty($this->_timers[$name])) {
-            return;
+            return $this;
         }
         $this->record($name, microtime(true) - $this->_timers[$name]);
         // echo 'stop timer:', $name, ' => ', $this->_timers[$name], PHP_EOL;
 
         unset($this->_timers[$name]);
+        return $this;
     }
 
     /**
@@ -209,6 +211,7 @@ class MTA {
         }
         $e = $timeElapsed * 1000;
         $this->_records[$timerName] = empty($this->_records[$timerName]) ? $e : $this->_records[$timerName] + $e;
+        return $this;
     }
 
     /**
@@ -396,6 +399,8 @@ class MTA {
                 }
             })();
         </script>";
+
+        $this->clear();
 
         return $content;
     }
