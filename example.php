@@ -2,10 +2,10 @@
 
 require('MTA.php');
 
-$mta = MTA::create('www');
+$mta = MTA::getInstance('www');
 
 $mta->config('sender', 'socket');
-$mta->config('server', array('host' => '127.0.0.1', 'port' => 8425));
+$mta->config('server', array('host' => '127.0.0.1', 'port' => 8125));
 $mta->config('sampleRate', 100);
 
 $mta->tag('server', 'localhost');
@@ -45,6 +45,8 @@ $mta->increment('framework.stats');
 $mta->increment('framework.stats');
 
 $mta->gauge('framework.total', 300);
+
+$mta->send();
 
 function simulate_execution() {
     $count = rand(2000, 20000);
