@@ -32,14 +32,14 @@ class MTA {
     /**
      * has header sent
      */
-    private $_hasHeaderSent = false;
+    private $_hasHeaderJsSent = false;
 
     /**
      * config
      */
     private $_configs = array(
         'sender' => 'browser',
-        'server' => array('host' => '127.0.0.1', 'port' => 8125),
+        'server' => array('host' => '10.64.20.222', 'port' => 8125),
         'beacon' => 'http://frep.meituan.net/_.gif',
         'jspath' => 'http://s0.meituan.net/vendor/js/mta.min.js',
         'tagPrefix' => '_t_',
@@ -112,7 +112,7 @@ class MTA {
         if ($key === 'server') {
             if (isset($this->_configs['server']['host']) && isset($this->_configs['server']['port'])) {
             } else {
-                trigger_error('server misconfigured is required', E_USER_ERROR);
+                trigger_error('server host and port is required', E_USER_ERROR);
             }
         }
 
@@ -314,10 +314,10 @@ class MTA {
         if ($this->_configs['sender'] !== 'browser') {
             return;
         }
-        if ($this->_hasHeaderSent) {
+        if ($this->_hasHeaderJsSent) {
             return;
         }
-        $this->_hasHeaderSent = true;
+        $this->_hasHeaderJsSent = true;
 
         return "
         <script>
@@ -344,7 +344,7 @@ class MTA {
         }
 
         $content = '';
-        if (!$this->_hasHeaderSent) {
+        if (!$this->_hasHeaderJsSent) {
             $content .= $this->getHeaderJS();
         }
 
