@@ -41,7 +41,7 @@ class MTA {
         'sender' => 'browser',
         'server' => array('host' => '127.0.0.1', 'port' => 8125),
         'beacon' => 'http://frep.meituan.net/_.gif',
-        'jspath' => 'mta.js',
+        'jspath' => 'http://s0.meituan.net/vendor/js/mta.min.js',
         'tagPrefix' => '_t_',
         'sampleRate' => 100,
     );
