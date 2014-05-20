@@ -1,6 +1,9 @@
 <?php
+error_reporting(E_ALL);
 
-require('MTA.php');
+require('init.php');
+
+use Liuggio\MTA\MTA;
 
 $mta = MTA::getInstance('www');
 

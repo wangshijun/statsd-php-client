@@ -3,6 +3,8 @@ error_reporting(E_ALL);
 
 require('MTA.php');
 
+use Liuggio\MTA\MTA;
+
 $mta = MTA::getInstance();
 $mta->start('anonymous.timer');
 simulate_execution();
