@@ -1,6 +1,6 @@
 <?php
 
-namespace MTA\MTA;
+namespace Liuggio\MTA;
 
 use Liuggio\StatsdClient\StatsdClient,
     Liuggio\StatsdClient\Factory\StatsdDataFactory,
