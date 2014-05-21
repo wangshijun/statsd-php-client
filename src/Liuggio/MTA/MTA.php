@@ -453,7 +453,7 @@ class MTA {
             break;
         }
         $client = new StatsdClient($sender);
-        $client->send($data);
+        return $client->send($data);
     }
 
     /**

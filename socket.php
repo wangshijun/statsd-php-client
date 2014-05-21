@@ -3,9 +3,12 @@ error_reporting(E_ALL);
 
 require('MTA.php');
 
+$sender = isset($argv[1]) ? trim($argv[1]) : 'socket';
+$sender = in_array($sender, array('echo', 'socket')) ? $sender : 'socket';
+
 $mta = MTA::getInstance('www');
 
-$mta->config('sender', 'echo');
+$mta->config('sender', $sender);
 $mta->config('server', array('host' => '127.0.0.1', 'port' => 8125));
 $mta->config('sampleRate', 100);
 
@@ -47,7 +50,7 @@ $mta->increment('framework.stats');
 
 $mta->gauge('framework.total', 300);
 
-$mta->send();
+return $mta->send();
 
 function simulate_execution() {
     $count = rand(2000, 20000);
