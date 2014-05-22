@@ -38,7 +38,7 @@ class MTA {
      */
     private $_configs = array(
         'sender' => 'browser',
-        'server' => array('host' => '10.64.20.222', 'port' => 8125),
+        'server' => array('host' => '10.64.20.222', 'port' => 8889),
         'beacon' => 'http://frep.meituan.net/_.gif',
         'jspath' => 'http://s0.meituan.net/vendor/js/mta.min.js',
         'tagPrefix' => '_t_',
