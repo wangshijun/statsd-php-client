@@ -280,22 +280,24 @@ class MTA {
     }
 
     /**
+     * get buffers by type
+     *
+     * @param string $type
+     * @return array
+     */
+    public function getBuffers($type) {
+        if (isset($this->_buffers[$type])) {
+            return $this->_buffers[$type];
+        }
+
+        return null;
+    }
+
+    /**
      * send data to browser or via UDP
      */
     public function send() {
-        // copy data from "anonymous" to current
-        $anonymous = self::getInstance('anonymous');
-        $timers = $anonymous->getTimers();
-        foreach ($timers as $key => $value) {
-            $this->timing($key, $value);
-        }
-        $anonymous->clear();
-
-        // get timers
-        $timers = $this->getTimers();
-        foreach ($timers as $key => $value) {
-            $this->timing($key, $value);
-        }
+        $this->_merge('anonymous');
 
         // send from browser | server
         if ($this->_configs['sender'] === 'browser') {
@@ -303,6 +305,30 @@ class MTA {
         } else {
             return $this->_sendFromServer();
         }
+    }
+
+    /**
+     * merge data(timers, buffers) to current instance
+     */
+    protected function _merge($account = 'anonymous') {
+        $instance = self::getInstance($account);
+
+        // get timers
+        $timers = $instance->getTimers();
+        foreach ($timers as $key => $value) {
+            $this->timing($key, $value);
+        }
+
+        // copy buffers
+        $types = array('timer' => 'timing', 'counter' => 'increment', 'gauge' => 'gauge');
+        foreach ($types as $type => $method) {
+            $buffers = $instance->getBuffers($type);
+            foreach ($buffers as $key => $value) {
+                $this->{$method}($key, $value);
+            }
+        }
+
+        $instance->clear();
     }
 
     /**
