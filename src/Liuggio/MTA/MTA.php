@@ -297,7 +297,14 @@ class MTA {
      * send data to browser or via UDP
      */
     public function send() {
+        // merge data from anonymous instance
         $this->_merge('anonymous');
+
+        // copy timers to buffer
+        $timers = $this->getTimers();
+        foreach ($timers as $key => $value) {
+            $this->timing($key, $value);
+        }
 
         // send from browser | server
         if ($this->_configs['sender'] === 'browser') {
