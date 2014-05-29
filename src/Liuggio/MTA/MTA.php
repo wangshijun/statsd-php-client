@@ -214,6 +214,48 @@ class MTA {
     }
 
     /**
+     * start and end a timer automatically
+     *
+     * @param string $timerName
+     * @param float $value
+     */
+    public function mark($timerName, $value = null) {
+        static $tsLastMaker;
+
+        if (empty($tsLastMaker)) {
+            $tsLastMaker = $this->_getStartTime();
+        }
+
+        if (is_null($value)) {
+            $now = microtime(true);
+            $this->timing($timerName, ceil(($now - $tsLastMaker) * 1000));
+            $tsLastMaker = $now;
+        } else {
+            $this->timing($timerName, $value);
+        }
+
+        return $this;
+    }
+
+    /**
+     * get the time the current request started.
+     *
+     * @return float time of request start
+     */
+    private function _getStartTime() {
+        if (defined('START_TIME')) {
+            $startTime = START_TIME;
+        } elseif (isset($_SERVER['REQUEST_TIME_FLOAT'])) {
+            $startTime = $_SERVER['REQUEST_TIME_FLOAT'];
+        } elseif (isset($_SERVER['REQUEST_TIME'])) {
+            $startTime = $_SERVER['REQUEST_TIME'];
+        } else {
+            $startTime = microtime(true);
+        }
+        return $startTime;
+    }
+
+    /**
      * Clear all existing timers
      *
      * @return boolean true
@@ -443,16 +485,16 @@ class MTA {
     private function _sendFromServer() {
         static $factory;
 
-        if (empty($factory)) {
-            $factory =  new StatsdDataFactory('\Liuggio\StatsdClient\Entity\StatsdData');
-        }
-
         $data = array();
 
         // sample hit ?
         if (rand(1, 100) > $this->_configs['sampleRate']) {
             $this->clear();
             return $data;
+        }
+
+        if (empty($factory)) {
+            $factory =  new StatsdDataFactory('\Liuggio\StatsdClient\Entity\StatsdData');
         }
 
         // print_r($this->_buffers);
@@ -505,7 +547,7 @@ class MTA {
             }
             $tagContent = implode('.', $tagItems);
         }
-        return implode('.', array($this->_prefix, $key, $tagContent));
+        return implode('.', array($this->_prefix, 'server', $key, $tagContent));
     }
 
     /**
